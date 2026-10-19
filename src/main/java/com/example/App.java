@@ -1,3 +1,4 @@
+
 package com.example;
 
 import com.sun.net.httpserver.HttpServer;
@@ -12,8 +13,11 @@ public class App {
     }
 
     public static void main(String[] args) throws IOException {
+        int port = Integer.parseInt(
+                System.getenv().getOrDefault("PORT", "8080"));
+
         HttpServer server = HttpServer.create(
-                new InetSocketAddress("0.0.0.0", 8080), 0);
+                new InetSocketAddress("0.0.0.0", port), 0);
 
         server.createContext("/", exchange -> {
             byte[] response = getMessage().getBytes("UTF-8");
@@ -27,6 +31,6 @@ public class App {
         });
 
         server.start();
-        System.out.println("Application started on port 8080");
+        System.out.println("Application started on port " + port);
     }
 }
