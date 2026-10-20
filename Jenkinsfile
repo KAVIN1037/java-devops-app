@@ -4,6 +4,7 @@ pipeline {
     environment {
         IMAGE_NAME = 'daddykavin/java-devops-app'
         SONAR_SERVER = 'SonarQube'
+        GIT_REPO = 'https://github.com/KAVIN1037/java-devops-app.git'
     }
 
     stages {
@@ -15,13 +16,13 @@ pipeline {
 
         stage('Maven Build') {
             steps {
-                bat 'mvn -B clean package -DskipTests'
+                sh 'mvn -B clean package -DskipTests'
             }
         }
 
         stage('Unit Test') {
             steps {
-                bat 'mvn -B test'
+                sh 'mvn -B test'
             }
             post {
                 always {
@@ -34,7 +35,7 @@ pipeline {
         stage('SonarQube Analysis') {
             steps {
                 withSonarQubeEnv("${SONAR_SERVER}") {
-                    bat 'mvn -B sonar:sonar'
+                    sh 'mvn -B sonar:sonar'
                 }
             }
         }
@@ -44,7 +45,7 @@ pipeline {
                 script {
                     env.IMAGE_TAG = "${env.BUILD_NUMBER}"
                 }
-                bat 'docker build -t %IMAGE_NAME%:%IMAGE_TAG% .'
+                sh 'docker build -t $IMAGE_NAME:$IMAGE_TAG .'
             }
         }
 
@@ -55,17 +56,23 @@ pipeline {
                     usernameVariable: 'DOCKER_USER',
                     passwordVariable: 'DOCKER_PASS'
                 )]) {
-                    bat 'echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin'
-                    bat 'docker push %IMAGE_NAME%:%IMAGE_TAG%'
-                    bat 'docker logout'
+                    sh '''
+                        set +x
+                        echo "$DOCKER_PASS" | docker login \
+                          -u "$DOCKER_USER" --password-stdin
+                        docker push "$IMAGE_NAME:$IMAGE_TAG"
+                        docker logout
+                    '''
                 }
             }
         }
 
         stage('Update Helm Configuration') {
             steps {
-                bat '''
-                powershell -NoProfile -Command "(Get-Content helm-chart/values.yaml -Raw) -replace 'tag: \\"[^\\"]+\\"', ('tag: \\"' + $env:BUILD_NUMBER + '\\"') | Set-Content helm-chart/values.yaml"
+                sh '''
+                    sed -i -E "s/(tag:[[:space:]]*)\\"[^\\"]+\\"/\\1\\"${BUILD_NUMBER}\\"/" \
+                      helm-chart/values.yaml
+                    grep -n 'tag:' helm-chart/values.yaml
                 '''
             }
         }
@@ -77,12 +84,30 @@ pipeline {
                     usernameVariable: 'GIT_USER',
                     passwordVariable: 'GIT_TOKEN'
                 )]) {
-                    bat '''
-                    git config user.name "Jenkins CI"
-                    git config user.email "jenkins@example.com"
-                    git add helm-chart/values.yaml
-                    git commit -m "Update image version to %BUILD_NUMBER%" || exit /b 0
-                    git push origin HEAD:main
+                    sh '''
+                        set +x
+                        git config user.name "Jenkins CI"
+                        git config user.email "jenkins@example.com"
+                        git add helm-chart/values.yaml
+
+                        if ! git diff --cached --quiet; then
+                            git commit -m "Update image version to ${BUILD_NUMBER}"
+
+                            ASKPASS=$(mktemp)
+                            trap 'rm -f "$ASKPASS"' EXIT
+                            printf '%s\\n' \
+                              '#!/bin/sh' \
+                              'case "$1" in' \
+                              *Username*) echo "$GIT_USER" ;; \
+                              *) echo "$GIT_TOKEN" ;; \
+                              esac > "$ASKPASS"
+                            chmod 700 "$ASKPASS"
+                            GIT_ASKPASS="$ASKPASS" \
+                              GIT_TERMINAL_PROMPT=0 \
+                              git push "$GIT_REPO" HEAD:main
+                        else
+                            echo "No Helm changes to commit."
+                        fi
                     '''
                 }
             }
