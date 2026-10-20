@@ -31,10 +31,10 @@ securityContext:
 service:
   type: NodePort
   port: 8080
-  nodePort: 30082
+  nodePort: 30083
 
 ingress: 
-  enabled: true
+  enabled: false
   className: nginx
   annotations: {}
   hosts:
@@ -87,3 +87,4 @@ appConfig:
 appSecret:
   enabled: true
   value: "change-me-before-production"
+
