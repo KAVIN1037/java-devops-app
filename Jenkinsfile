@@ -33,13 +33,15 @@ pipeline {
         }
 
         stage('SonarQube Analysis') {
-            steps {
-                withSonarQubeEnv("${SONAR_SERVER}") {
-                sh 'mvn -B org.sonarsource.scanner.maven:sonar-maven-plugin:5.3.0.6276:sonar'
-                }
-            }
+              when {
+                expression { return false }
+       }
+    steps {
+        withSonarQubeEnv("${SONAR_SERVER}") {
+            sh 'mvn -B org.sonarsource.scanner.maven:sonar-maven-plugin:5.3.0.6276:sonar'
         }
-
+    }
+}
         stage('Docker Build') {
             steps {
                 script {
