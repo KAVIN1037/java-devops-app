@@ -71,8 +71,8 @@ pipeline {
             steps {
                 sh '''
                     sed -i -E "s/(tag:[[:space:]]*)\\"[^\\"]+\\"/\\1\\"${BUILD_NUMBER}\\"/" \
-                      helm-chart/values.yaml
-                    grep -n 'tag:' helm-chart/values.yaml
+                      helm/values.yaml
+                    grep -n 'tag:' helm/values.yaml
                 '''
             }
         }
@@ -88,7 +88,7 @@ pipeline {
                         set +x
                         git config user.name "Jenkins CI"
                         git config user.email "jenkins@example.com"
-                        git add helm-chart/values.yaml
+                        git add helm/values.yaml
 
                         if ! git diff --cached --quiet; then
                             git commit -m "Update image version to ${BUILD_NUMBER}"
