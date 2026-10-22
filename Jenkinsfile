@@ -100,9 +100,9 @@ pipeline {
                             printf '%s\\n' \
                               '#!/bin/sh' \
                               'case "$1" in' \
-                              *Username*) echo "$GIT_USER" ;; \
-                              *) echo "$GIT_TOKEN" ;; \
-                              esac > "$ASKPASS"
+                              '  *Username*) echo "$GIT_USER" ;;' \
+                              '  *) echo "$GIT_TOKEN" ;;' \
+                              'esac' > "$ASKPASS"
                             chmod 700 "$ASKPASS"
                             GIT_ASKPASS="$ASKPASS" \
                               GIT_TERMINAL_PROMPT=0 \
