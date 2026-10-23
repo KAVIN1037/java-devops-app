@@ -4,7 +4,7 @@ pipeline {
     environment {
         IMAGE_NAME = 'daddykavin/java-devops-app'
         SONAR_SERVER = 'SonarQube'
-        GIT_REPO = 'https://github.com/KAVIN1037/java-devops-app.git'
+        GIT_REPO = 'https://github.com/KAVIN1037/java-devops-gitops.git'
     }
 
     stages {
