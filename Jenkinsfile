@@ -33,20 +33,27 @@ pipeline {
         }
 
         stage('SonarQube Analysis') {
-              when {
+            when {
                 expression { return false }
-       }
-    steps {
-        withSonarQubeEnv("${SONAR_SERVER}") {
-            sh 'mvn -B org.sonarsource.scanner.maven:sonar-maven-plugin:5.3.0.6276:sonar'
+            }
+            steps {
+                withSonarQubeEnv("${SONAR_SERVER}") {
+                    sh 'mvn -B org.sonarsource.scanner.maven:sonar-maven-plugin:5.3.0.6276:sonar'
+                }
+            }
         }
-    }
-}
-        stage('Docker Build') {
+
+        stage('Image Versioning') {
             steps {
                 script {
                     env.IMAGE_TAG = "${env.BUILD_NUMBER}"
+                    echo "Docker image tag: ${env.IMAGE_TAG}"
                 }
+            }
+        }
+
+        stage('Docker Build') {
+            steps {
                 sh 'docker build -t $IMAGE_NAME:$IMAGE_TAG .'
             }
         }
@@ -60,8 +67,7 @@ pipeline {
                 )]) {
                     sh '''
                         set +x
-                        echo "$DOCKER_PASS" | docker login \
-                          -u "$DOCKER_USER" --password-stdin
+                        echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
                         docker push "$IMAGE_NAME:$IMAGE_TAG"
                         docker logout
                     '''
@@ -71,48 +77,53 @@ pipeline {
 
         stage('Update Helm Configuration') {
             steps {
-                sh '''
-                    sed -i -E "s/(tag:[[:space:]]*)\\"[^\\"]+\\"/\\1\\"${BUILD_NUMBER}\\"/" \
-                      helm/values.yaml
-                    grep -n 'tag:' helm/values.yaml
-                '''
+                dir('gitops') {
+                    git branch: 'main',
+                        credentialsId: 'github-creds',
+                        url: "${GIT_REPO}"
+
+                    sh '''
+                        sed -i -E "s/(tag:[[:space:]]*)\\"[^\\"]+\\"/\\1\\"${BUILD_NUMBER}\\"/" helm/values.yaml
+                        grep -n 'tag:' helm/values.yaml
+                    '''
+                }
             }
         }
 
         stage('Commit Deployment Change') {
             steps {
-                withCredentials([usernamePassword(
-                    credentialsId: 'github-creds',
-                    usernameVariable: 'GIT_USER',
-                    passwordVariable: 'GIT_TOKEN'
-                )]) {
-                    sh '''
-                        set +x
-                        git config user.name "Jenkins CI"
-                        git config user.email "jenkins@example.com"
-                        git add helm/values.yaml
+                dir('gitops') {
+                    withCredentials([usernamePassword(
+                        credentialsId: 'github-creds',
+                        usernameVariable: 'GIT_USER',
+                        passwordVariable: 'GIT_TOKEN'
+                    )]) {
+                        sh '''
+                            set +x
+                            git config user.name "Jenkins CI"
+                            git config user.email "jenkins@example.com"
+                            git add helm/values.yaml
 
-                        if ! git diff --cached --quiet; then
-                            git commit -m "Update image version to ${BUILD_NUMBER}"
-
-                            ASKPASS=$(mktemp)
-                            trap 'rm -f "$ASKPASS"' EXIT
-                            printf '%s\\n' \
-                              '#!/bin/sh' \
-                              'case "$1" in' \
-                              '  *Username*) echo "$GIT_USER" ;;' \
-                              '  *) echo "$GIT_TOKEN" ;;' \
-                              'esac' > "$ASKPASS"
-                            chmod 700 "$ASKPASS"
-                            GIT_ASKPASS="$ASKPASS" \
-                              GIT_TERMINAL_PROMPT=0 \
-                              git push "$GIT_REPO" HEAD:main
-                        else
-                            echo "No Helm changes to commit."
-                        fi
-                    '''
+                            if ! git diff --cached --quiet; then
+                                git commit -m "Update image version to ${BUILD_NUMBER}"
+                                ASKPASS=$(mktemp)
+                                trap 'rm -f "$ASKPASS"' EXIT
+                                printf '%s\\n' \
+                                  '#!/bin/sh' \
+                                  'case "$1" in' \
+                                  '  *Username*) echo "$GIT_USER" ;;' \
+                                  '  *) echo "$GIT_TOKEN" ;;' \
+                                  'esac' > "$ASKPASS"
+                                chmod 700 "$ASKPASS"
+                                GIT_ASKPASS="$ASKPASS" GIT_TERMINAL_PROMPT=0 git push origin HEAD:main
+                            else
+                                echo "No Helm changes to commit."
+                            fi
+                        '''
+                    }
                 }
             }
         }
     }
 }
+
