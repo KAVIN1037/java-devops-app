@@ -32,13 +32,18 @@ pipeline {
             }
         }
 
-        stage('SonarQube Analysis') {
-            steps {
-                withSonarQubeEnv("${SONAR_SERVER}") {
-                    sh 'mvn -B org.sonarsource.scanner.maven:sonar-maven-plugin:5.3.0.6276:sonar'
-                }
-            }
+
+stage('SonarQube Analysis') {
+    steps {
+        withSonarQubeEnv("${SONAR_SERVER}") {
+            sh '''
+                mvn -B org.sonarsource.scanner.maven:sonar-maven-plugin:5.3.0.6276:sonar \
+                  -Dsonar.organization=kavin1037 \
+                  -Dsonar.projectKey=KAVIN1037_java-devops-app
+            '''
         }
+    }
+}
 
         stage('Image Versioning') {
             steps {
