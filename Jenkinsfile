@@ -32,7 +32,6 @@ pipeline {
             }
         }
 
-
 stage('SonarQube Analysis') {
     steps {
         withSonarQubeEnv("${SONAR_SERVER}") {
