@@ -32,25 +32,28 @@ pipeline {
             }
         }
 
-stage('SonarQube Cloud Analysis') {
-    steps {
-        withCredentials([string(
-            credentialsId: 'sonarcloud-token',
-            variable: 'SONAR_TOKEN'
-        )]) {
-            sh '''
-                set +x
-                mvn -B org.sonarsource.scanner.maven:sonar-maven-plugin:5.3.0.6276:sonar \
-                  -Dsonar.organization=kavin1037 \
-                  -Dsonar.projectKey=KAVIN1037_java-devops-app \
-                  -Dsonar.host.url=https://sonarcloud.io \
-                  -Dsonar.token="$SONAR_TOKEN"
-            '''
-        }
-    }
-}
+        stage('SonarQube Cloud Analysis') {
+            steps {
+                withCredentials([string(
+                    credentialsId: 'sonarcloud-token',
+                    variable: 'SONAR_TOKEN'
+                )]) {
+                    sh '''
+                        set +x
+                        export SONAR_SCANNER_JAVA_OPTS="-Xmx2048m"
+                        export MAVEN_OPTS="-Xmx2048m"
 
-        stage('Image Versioning') {
+                        mvn -B org.sonarsource.scanner.maven:5.3.0.6276:sonar \
+                          -Dsonar.organization=kavin1037 \
+                          -Dsonar.projectKey=KAVIN1037_java-devops-app \
+                          -Dsonar.host.url=https://sonarcloud.io \
+                          -Dsonar.token="$SONAR_TOKEN" \
+                          -Dsonar.scanner.javaOpts="-Xmx2048m"
+                    '''
+                }
+            }
+        }
+      stage('Image Versioning') {
             steps {
                 script {
                     env.IMAGE_TAG = "${env.BUILD_NUMBER}"
