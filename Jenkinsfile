@@ -43,7 +43,7 @@ pipeline {
                         export SONAR_SCANNER_JAVA_OPTS="-Xmx2048m"
                         export MAVEN_OPTS="-Xmx2048m"
 
-                        mvn -B org.sonarsource.scanner.maven:5.3.0.6276:sonar \
+                       mvn -B org.sonarsource.scanner.maven:sonar-maven-plugin:5.3.0.6276:sonar \
                           -Dsonar.organization=kavin1037 \
                           -Dsonar.projectKey=KAVIN1037_java-devops-app \
                           -Dsonar.host.url=https://sonarcloud.io \
