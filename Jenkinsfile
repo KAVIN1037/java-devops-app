@@ -32,13 +32,19 @@ pipeline {
             }
         }
 
-stage('SonarQube Analysis') {
+stage('SonarQube Cloud Analysis') {
     steps {
-        withSonarQubeEnv("${SONAR_SERVER}") {
+        withCredentials([string(
+            credentialsId: 'sonarcloud-token',
+            variable: 'SONAR_TOKEN'
+        )]) {
             sh '''
+                set +x
                 mvn -B org.sonarsource.scanner.maven:sonar-maven-plugin:5.3.0.6276:sonar \
                   -Dsonar.organization=kavin1037 \
-                  -Dsonar.projectKey=KAVIN1037_java-devops-app
+                  -Dsonar.projectKey=KAVIN1037_java-devops-app \
+                  -Dsonar.host.url=https://sonarcloud.io \
+                  -Dsonar.token="$SONAR_TOKEN"
             '''
         }
     }
