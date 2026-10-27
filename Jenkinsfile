@@ -48,7 +48,7 @@ pipeline {
                           -Dsonar.projectKey=KAVIN1037_java-devops-app \
                           -Dsonar.host.url=https://sonarcloud.io \
                           -Dsonar.token="$SONAR_TOKEN" \
-                          -Dsonar.scanner.javaOpts="-Xmx2048m"
+                          -Dsonar.scanner.javaOpts="-Xmx2048m" \
                           -Dsonar.qualitygate.wait=true \
                           -Dsonar.qualitygate.timeout=300
                     '''
